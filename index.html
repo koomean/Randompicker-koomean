@@ -8,7 +8,7 @@
     <style>
         /* --- CSS Design --- */
         :root {
-            /* สี Light Mode (ค่าเริ่มต้น) */
+            /* สี Light Mode */
             --bg-gradient: linear-gradient(45deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
             --container-bg: rgba(255, 255, 255, 0.25);
             --container-border: rgba(255, 255, 255, 0.4);
@@ -44,7 +44,7 @@
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             overflow: hidden;
-            transition: background 0.5s ease; /* เอฟเฟกต์ตอนเปลี่ยนธีม */
+            transition: background 0.5s ease;
         }
 
         @keyframes gradientBG {
@@ -184,10 +184,9 @@
             animation: popUp 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) both;
             color: #d63384; 
             font-size: 3rem;
-            text-shadow: 0 0 20px rgba(214, 51, 132, 0.6); /* เพิ่มแสงวิบวับ */
+            text-shadow: 0 0 20px rgba(214, 51, 132, 0.6);
         }
         
-        /* ปรับสีผู้ชนะใน Dark Mode ให้เด่นขึ้น */
         body.dark-mode .winner-anim {
             color: #ff6b81;
             text-shadow: 0 0 20px rgba(255, 107, 129, 0.8);
@@ -209,11 +208,9 @@
         }
     </style>
 </head>
-<body>
-
-    <canvas id="confetti-canvas"></canvas>
+<body class="dark-mode"> <canvas id="confetti-canvas"></canvas>
     
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
 
     <div class="container">
         <h1>✨ Random Picker ✨</h1>
@@ -246,9 +243,9 @@
             
             // เปลี่ยนไอคอนปุ่ม
             if (document.body.classList.contains('dark-mode')) {
-                themeBtn.innerText = '☀️'; // เปลี่ยนเป็นพระอาทิตย์
+                themeBtn.innerText = '☀️'; // ถ้ามืด ให้ปุ่มเป็นพระอาทิตย์
             } else {
-                themeBtn.innerText = '🌙'; // เปลี่ยนเป็นพระจันทร์
+                themeBtn.innerText = '🌙'; // ถ้าสว่าง ให้ปุ่มเป็นพระจันทร์
             }
         }
 
