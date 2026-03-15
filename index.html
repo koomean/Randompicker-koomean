@@ -4,363 +4,715 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Picker - ระบบสุ่มชื่อ</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* --- CSS Design --- */
+        /* ════════════════════════════════════
+           § 1 · DESIGN TOKENS
+        ════════════════════════════════════ */
         :root {
-            /* สี Light Mode */
-            --bg-gradient: linear-gradient(45deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
-            --container-bg: rgba(255, 255, 255, 0.25);
-            --container-border: rgba(255, 255, 255, 0.4);
-            --text-main: #333;
-            --text-h1: #fff;
-            --input-bg: rgba(255, 255, 255, 0.8);
+            --bg-from: #FF9A9E;
+            --bg-to:   #FECFEF;
+            --glass:   rgba(255,255,255,0.28);
+            --glass-border: rgba(255,255,255,0.45);
+            --text-main: #2d2d2d;
+            --text-white: #fff;
+            --input-bg:  rgba(255,255,255,0.75);
             --input-text: #333;
-            --result-text: #333;
-            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            --result-win: #c0175c;
+            --result-glow: rgba(192,23,92,0.55);
+            --shadow: 0 8px 32px rgba(31,38,135,0.3);
+            --history-bg: rgba(255,255,255,0.2);
+            --history-item: rgba(255,255,255,0.55);
+            --pill-bg: rgba(255,255,255,0.25);
+            --pill-hover: rgba(255,255,255,0.45);
+        }
+        body.dark-mode {
+            --bg-from: #0f0c29;
+            --bg-to:   #302b63;
+            --glass:   rgba(0,0,0,0.45);
+            --glass-border: rgba(255,255,255,0.1);
+            --text-main: #eee;
+            --text-white: #fff;
+            --input-bg:  rgba(255,255,255,0.1);
+            --input-text: #fff;
+            --result-win: #ff6b81;
+            --result-glow: rgba(255,107,129,0.7);
+            --shadow: 0 8px 32px rgba(0,0,0,0.8);
+            --history-bg: rgba(0,0,0,0.2);
+            --history-item: rgba(255,255,255,0.08);
+            --pill-bg: rgba(255,255,255,0.1);
+            --pill-hover: rgba(255,255,255,0.2);
         }
 
-        /* สี Dark Mode */
-        body.dark-mode {
-            --bg-gradient: linear-gradient(45deg, #0f0c29, #302b63, #24243e);
-            --container-bg: rgba(0, 0, 0, 0.4);
-            --container-border: rgba(255, 255, 255, 0.1);
-            --text-main: #eee;
-            --text-h1: #fff;
-            --input-bg: rgba(255, 255, 255, 0.1);
-            --input-text: #fff;
-            --result-text: #fff;
-            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-        }
+        /* ════════════════════════════════════
+           § 2 · BASE
+        ════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            margin: 0;
+            font-family: 'Kanit', sans-serif;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-family: 'Kanit', sans-serif;
-            background: var(--bg-gradient);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            overflow: hidden;
-            transition: background 0.5s ease;
+            padding: 24px 16px;
+            background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+            background-size: 300% 300%;
+            animation: gradBG 18s ease infinite;
+            transition: background 0.6s ease;
+            position: relative;
         }
-
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        @keyframes gradBG {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
 
+        /* ════════════════════════════════════
+           § 3 · CONFETTI CANVAS
+        ════════════════════════════════════ */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* ════════════════════════════════════
+           § 4 · FLOATING PILL BUTTONS (top)
+        ════════════════════════════════════ */
+        .top-bar {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: var(--pill-bg);
+            backdrop-filter: blur(12px);
+            color: var(--text-white);
+            font-family: 'Kanit', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        }
+        .pill-btn:hover {
+            background: var(--pill-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .pill-btn:active { transform: scale(0.95); }
+        .pill-btn i { font-size: 0.9rem; }
+
+        /* ════════════════════════════════════
+           § 5 · MAIN CARD
+        ════════════════════════════════════ */
         .container {
-            background: var(--container-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px;
-            border: 1px solid var(--container-border);
-            padding: 40px;
-            width: 90%;
-            max-width: 500px;
+            background: var(--glass);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border-radius: 26px;
+            border: 1px solid var(--glass-border);
+            padding: 36px 32px 28px;
+            width: 100%;
+            max-width: 520px;
             box-shadow: var(--shadow);
             text-align: center;
             position: relative;
             z-index: 10;
-            transition: all 0.5s ease;
+            transition: background 0.5s, box-shadow 0.5s;
+            margin-top: 50px; /* clear top-bar */
         }
 
-        h1 {
-            color: var(--text-h1);
-            margin-top: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            font-weight: 600;
+        /* ════════════════════════════════════
+           § 6 · HEADER
+        ════════════════════════════════════ */
+        .card-header { margin-bottom: 4px; }
+        .card-header h1 {
+            color: var(--text-white);
+            font-size: 1.9rem;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            color: var(--text-white);
+            opacity: 0.75;
+            font-size: 0.92rem;
+            margin-bottom: 16px;
         }
 
-        textarea {
-            width: 100%;
-            height: 150px;
-            border-radius: 12px;
-            border: 1px solid transparent;
-            padding: 15px;
-            font-family: 'Kanit', sans-serif;
-            font-size: 1rem;
-            margin: 20px 0;
-            box-sizing: border-box;
-            background: var(--input-bg);
-            resize: vertical;
-            color: var(--input-text);
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        textarea:focus {
-            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
-            border-color: rgba(255,255,255,0.5);
-        }
-
-        /* ปุ่ม Toggle Theme */
-        .theme-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s, background 0.3s;
-            z-index: 20;
+        /* ════════════════════════════════════
+           § 7 · COUNTER + CONTROLS ROW
+        ════════════════════════════════════ */
+        .input-controls {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
         }
-
-        .theme-btn:hover {
-            transform: scale(1.1) rotate(15deg);
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        button {
-            border: none;
-            padding: 12px 30px;
+        .entry-count {
+            font-size: 0.82rem;
+            color: var(--text-white);
+            opacity: 0.8;
+            background: rgba(255,255,255,0.18);
+            padding: 4px 12px;
             border-radius: 50px;
-            font-size: 1.1rem;
+        }
+        .remove-picked-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-white);
+            opacity: 0.85;
+            cursor: pointer;
+            user-select: none;
+        }
+        .remove-picked-wrap input[type=checkbox] { accent-color: #fff; cursor: pointer; }
+
+        /* ════════════════════════════════════
+           § 8 · TEXTAREA
+        ════════════════════════════════════ */
+        textarea {
+            width: 100%;
+            height: 140px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            padding: 14px 16px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 1rem;
+            background: var(--input-bg);
+            color: var(--input-text);
+            resize: vertical;
+            outline: none;
+            transition: box-shadow 0.3s, border-color 0.3s;
+            margin-bottom: 16px;
+        }
+        textarea:focus {
+            border-color: rgba(255,255,255,0.55);
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.25);
+        }
+        textarea::placeholder { opacity: 0.5; }
+
+        /* ════════════════════════════════════
+           § 9 · BUTTONS
+        ════════════════════════════════════ */
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn {
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 1.05rem;
             font-family: 'Kanit', sans-serif;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
         }
+        .btn:hover  { transform: translateY(-2px); }
+        .btn:active { transform: scale(0.94); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
         .btn-start {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
-            flex-grow: 1;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(118,75,162,0.4);
+            flex: 1;
         }
+        .btn-start:hover:not(:disabled) { box-shadow: 0 8px 22px rgba(118,75,162,0.55); }
 
         .btn-clear {
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255,255,255,0.45);
             color: #333;
         }
-        
-        /* ปรับปุ่ม Clear ใน Dark Mode */
         body.dark-mode .btn-clear {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.18);
             color: #fff;
         }
 
-        button:hover {
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
+        /* ════════════════════════════════════
+           § 10 · RESULT BOX
+        ════════════════════════════════════ */
         .result-box {
-            margin-top: 30px;
-            min-height: 80px;
+            min-height: 90px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--result-text);
-            text-shadow: 0 2px 0 rgba(0,0,0,0.1);
-            transition: all 0.3s;
+            margin-top: 22px;
+            gap: 6px;
         }
-
-        .winner-anim {
-            animation: popUp 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) both;
-            color: #d63384; 
-            font-size: 3rem;
-            text-shadow: 0 0 20px rgba(214, 51, 132, 0.6);
+        .result-label {
+            font-size: 0.78rem;
+            color: var(--text-white);
+            opacity: 0.65;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        
-        body.dark-mode .winner-anim {
-            color: #ff6b81;
-            text-shadow: 0 0 20px rgba(255, 107, 129, 0.8);
+        .result-name {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--text-white);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transition: color 0.2s;
+            min-height: 1.2em;
+            line-height: 1.2;
+            word-break: break-word;
         }
-
+        .result-name.rolling  { opacity: 0.75; }
+        .result-name.winner   {
+            color: var(--result-win);
+            text-shadow: 0 0 24px var(--result-glow);
+            animation: popUp 0.5s cubic-bezier(0.68,-0.55,0.27,1.55) both;
+        }
         @keyframes popUp {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+            0%   { transform: scale(0.4); opacity: 0; }
+            100% { transform: scale(1);   opacity: 1; }
         }
 
-        #confetti-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
+        /* ════════════════════════════════════
+           § 11 · HISTORY PANEL
+        ════════════════════════════════════ */
+        .history-wrap {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .history-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-white);
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .history-clear-btn {
+            background: none;
+            border: none;
+            color: var(--text-white);
+            opacity: 0.55;
+            font-family: 'Kanit', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 50px;
+            transition: opacity 0.2s, background 0.2s;
+        }
+        .history-clear-btn:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            max-height: 110px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .history-list:empty::before {
+            content: 'ยังไม่มีประวัติ';
+            font-size: 0.82rem;
+            color: var(--text-white);
+            opacity: 0.4;
+        }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+
+        .history-chip {
+            background: var(--history-item);
+            color: var(--text-white);
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: chipIn 0.3s ease;
+        }
+        @keyframes chipIn {
+            from { transform: scale(0.7); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+        .history-chip .round-num {
+            font-size: 0.7rem;
+            opacity: 0.55;
+        }
+
+        /* ════════════════════════════════════
+           § 12 · RESPONSIVE
+        ════════════════════════════════════ */
+        @media (max-width: 420px) {
+            .container { padding: 28px 18px 22px; }
+            .result-name { font-size: 1.9rem; }
+            .pill-btn span { display: none; }
         }
     </style>
 </head>
-<body class="dark-mode"> <canvas id="confetti-canvas"></canvas>
-    
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
+<body class="dark-mode">
 
-    <div class="container">
-        <h1>✨ Random Picker ✨</h1>
-        <p style="color: var(--text-h1); font-size: 1.2rem;">
-            koomean
-        </p>
-        <p style="color: var(--text-h1); opacity: 0.8; margin-bottom: 5px;">ใส่ชื่อหรือรายการ (บรรทัดละ 1 ชื่อ)</p>
-        
-        <textarea id="inputArea" placeholder="ตัวอย่าง:&#10;นายkoomean&#10;นางสาวqq&#10;กลุ่มที่ 1&#10;กลุ่มที่ 2"></textarea>
-        
-        <div class="btn-group">
-            <button class="btn-clear" onclick="clearInput()">ล้างข้อมูล</button>
-            <button class="btn-start" id="startBtn" onclick="startRandom()">สุ่มเลย!</button>
-        </div>
+    <canvas id="confetti-canvas"></canvas>
 
-        <div class="result-box" id="resultDisplay">...</div>
+    <!-- ── Top bar: Koo Mean Site · Theme toggle ── -->
+    <div class="top-bar">
+        <a href="https://koomean.github.io/koomean/" target="_blank" rel="noopener noreferrer"
+           class="pill-btn" id="site-link-btn">
+            <i class="fas fa-house"></i>
+            <span>Koo Mean SITE</span>
+        </a>
+        <button class="pill-btn" id="theme-btn">
+            <i class="fas fa-sun" id="theme-icon"></i>
+            <span id="theme-label">Light</span>
+        </button>
     </div>
 
+    <!-- ── Main Card ── -->
+    <div class="container">
+
+        <div class="card-header">
+            <h1>✨ Random Picker</h1>
+            <p class="card-subtitle">ใส่ชื่อหรือรายการ (บรรทัดละ 1 ชื่อ)</p>
+        </div>
+
+        <div class="input-controls">
+            <span class="entry-count" id="entry-count">0 รายการ</span>
+            <label class="remove-picked-wrap">
+                <input type="checkbox" id="remove-picked">
+                ลบออกหลังสุ่ม
+            </label>
+        </div>
+
+        <textarea id="input-area"
+            placeholder="ตัวอย่าง:&#10;นายkoomean&#10;นางสาวqq&#10;กลุ่มที่ 1&#10;กลุ่มที่ 2"
+        ></textarea>
+
+        <div class="btn-group">
+            <button class="btn btn-clear" id="clear-btn">ล้างข้อมูล</button>
+            <button class="btn btn-start" id="start-btn">สุ่มเลย!</button>
+        </div>
+
+        <!-- Result -->
+        <div class="result-box">
+            <span class="result-label" id="result-label" style="display:none;">ผู้ที่ถูกเลือก</span>
+            <div class="result-name" id="result-display">…</div>
+        </div>
+
+        <!-- History -->
+        <div class="history-wrap">
+            <div class="history-header">
+                <span class="history-title"><i class="fas fa-clock-rotate-left" style="margin-right:5px;"></i>ประวัติการสุ่ม</span>
+                <button class="history-clear-btn" id="history-clear-btn">ล้างประวัติ</button>
+            </div>
+            <div class="history-list" id="history-list"></div>
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════
+         JAVASCRIPT
+    ════════════════════════════════════════ -->
     <script>
-        const inputArea = document.getElementById('inputArea');
-        const resultDisplay = document.getElementById('resultDisplay');
-        const startBtn = document.getElementById('startBtn');
-        const themeBtn = document.getElementById('themeBtn');
-        let isRunning = false;
-        let interval;
+    'use strict';
 
-        // --- ฟังก์ชัน Dark Mode ---
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            
-            // เปลี่ยนไอคอนปุ่ม
-            if (document.body.classList.contains('dark-mode')) {
-                themeBtn.innerText = '☀️'; // ถ้ามืด ให้ปุ่มเป็นพระอาทิตย์
+    // ════════════════════════════════════
+    // § 1 · ELEMENT CACHE
+    // ════════════════════════════════════
+
+    const $ = id => document.getElementById(id);
+    const DOM = {
+        body          : document.body,
+        themeBtn      : $('theme-btn'),
+        themeIcon     : $('theme-icon'),
+        themeLabel    : $('theme-label'),
+        inputArea     : $('input-area'),
+        entryCount    : $('entry-count'),
+        removePicked  : $('remove-picked'),
+        clearBtn      : $('clear-btn'),
+        startBtn      : $('start-btn'),
+        resultDisplay : $('result-display'),
+        resultLabel   : $('result-label'),
+        historyList   : $('history-list'),
+        historyClear  : $('history-clear-btn'),
+    };
+
+    // ════════════════════════════════════
+    // § 2 · STATE
+    // ════════════════════════════════════
+
+    const state = {
+        rolling    : false,
+        rollTimer  : null,
+        history    : [],     // [{ round, name }]
+        round      : 0,
+    };
+
+    // ════════════════════════════════════
+    // § 3 · THEME  (persisted)
+    // ════════════════════════════════════
+
+    function applyTheme(dark) {
+        DOM.body.classList.toggle('dark-mode', dark);
+        DOM.themeIcon.className  = dark ? 'fas fa-sun' : 'fas fa-moon';
+        DOM.themeLabel.textContent = dark ? 'Light' : 'Dark';
+        localStorage.setItem('rp-theme', dark ? 'dark' : 'light');
+    }
+
+    (function initTheme() {
+        const saved = localStorage.getItem('rp-theme');
+        // Default = dark
+        applyTheme(saved !== 'light');
+    })();
+
+    DOM.themeBtn.addEventListener('click', () => {
+        applyTheme(!DOM.body.classList.contains('dark-mode'));
+    });
+
+    // ════════════════════════════════════
+    // § 4 · LIVE ENTRY COUNTER
+    // ════════════════════════════════════
+
+    function getItems() {
+        return DOM.inputArea.value.split('\n').map(s => s.trim()).filter(Boolean);
+    }
+
+    DOM.inputArea.addEventListener('input', () => {
+        const n = getItems().length;
+        DOM.entryCount.textContent = `${n} รายการ`;
+    });
+
+    // ════════════════════════════════════
+    // § 5 · CLEAR BUTTON
+    // ════════════════════════════════════
+
+    DOM.clearBtn.addEventListener('click', () => {
+        DOM.inputArea.value = '';
+        DOM.entryCount.textContent = '0 รายการ';
+        DOM.resultDisplay.textContent = '…';
+        DOM.resultDisplay.className   = 'result-name';
+        DOM.resultLabel.style.display = 'none';
+    });
+
+    // ════════════════════════════════════
+    // § 6 · RANDOM PICK
+    // ════════════════════════════════════
+
+    /**
+     * Cryptographically-unbiased random integer in [0, n)
+     * Falls back to Math.random if crypto is unavailable.
+     */
+    function randomInt(n) {
+        if (n <= 0) return 0;
+        if (window.crypto?.getRandomValues) {
+            const arr = new Uint32Array(1);
+            // Rejection sampling to avoid modulo bias
+            const limit = Math.floor(0xFFFFFFFF / n) * n;
+            do { window.crypto.getRandomValues(arr); } while (arr[0] >= limit);
+            return arr[0] % n;
+        }
+        return Math.floor(Math.random() * n);
+    }
+
+    DOM.startBtn.addEventListener('click', startRandom);
+
+    // Also allow pressing Enter while textarea is empty (convenience)
+    DOM.inputArea.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); startRandom(); }
+    });
+
+    function startRandom() {
+        if (state.rolling) return;
+
+        const items = getItems();
+        if (!items.length) {
+            showShake(DOM.inputArea);
+            return;
+        }
+
+        state.rolling = true;
+        DOM.startBtn.disabled = true;
+        DOM.resultDisplay.className   = 'result-name rolling';
+        DOM.resultLabel.style.display = 'none';
+
+        const ROLL_MS    = 2200;
+        const TICK_MS    = 55;
+        const startTime  = Date.now();
+
+        // Rolling animation – speed slows toward the end
+        function tick() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / ROLL_MS, 1);
+
+            // Ease out: tick interval grows from 55 ms → 200 ms
+            const delay = TICK_MS + progress * 145;
+
+            DOM.resultDisplay.textContent = items[randomInt(items.length)];
+
+            if (elapsed < ROLL_MS) {
+                state.rollTimer = setTimeout(tick, delay);
             } else {
-                themeBtn.innerText = '🌙'; // ถ้าสว่าง ให้ปุ่มเป็นพระจันทร์
+                finish(items);
             }
         }
 
-        function clearInput() {
-            inputArea.value = '';
-            resultDisplay.innerText = '...';
-            resultDisplay.classList.remove('winner-anim');
+        tick();
+    }
+
+    function finish(items) {
+        // Final pick — independent random to avoid correlation with last tick
+        const winner = items[randomInt(items.length)];
+
+        DOM.resultDisplay.textContent = winner;  // safe: textContent
+        DOM.resultDisplay.className   = 'result-name winner';
+        DOM.resultLabel.style.display = 'block';
+
+        // Optionally remove from textarea
+        if (DOM.removePicked.checked) {
+            const remaining = getItems().filter(n => n !== winner);
+            DOM.inputArea.value = remaining.join('\n');
+            DOM.entryCount.textContent = `${remaining.length} รายการ`;
         }
 
-        function startRandom() {
-            if (isRunning) return;
+        // History
+        state.round++;
+        addHistory(state.round, winner);
 
-            const text = inputArea.value;
-            const items = text.split('\n').filter(item => item.trim() !== '');
+        state.rolling = false;
+        DOM.startBtn.disabled = false;
 
-            if (items.length === 0) {
-                alert("กรุณาใส่ชื่ออย่างน้อย 1 ชื่อครับ");
-                return;
-            }
+        celebrate();
+    }
 
-            if (items.length === 1) {
-                resultDisplay.innerText = items[0];
-                celebrate();
-                return;
-            }
+    // ════════════════════════════════════
+    // § 7 · HISTORY
+    // ════════════════════════════════════
 
-            isRunning = true;
-            startBtn.innerText = "กำลังสุ่ม...";
-            startBtn.style.opacity = "0.7";
-            resultDisplay.classList.remove('winner-anim');
+    function addHistory(round, name) {
+        state.history.unshift({ round, name });
 
-            let counter = 0;
-            const duration = 2000;
-            const speed = 50;
+        const chip = document.createElement('div');
+        chip.className = 'history-chip';
 
-            interval = setInterval(() => {
-                const randomItem = items[Math.floor(Math.random() * items.length)];
-                resultDisplay.innerText = randomItem;
-            }, speed);
+        const numSpan = document.createElement('span');
+        numSpan.className   = 'round-num';
+        numSpan.textContent = `#${round}`;
 
-            setTimeout(() => {
-                clearInterval(interval);
-                const winner = items[Math.floor(Math.random() * items.length)];
-                resultDisplay.innerText = winner;
-                resultDisplay.classList.add('winner-anim');
-                
-                isRunning = false;
-                startBtn.innerText = "สุ่มเลย!";
-                startBtn.style.opacity = "1";
-                
-                celebrate();
-            }, duration);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name; // safe: textContent
+
+        chip.appendChild(numSpan);
+        chip.appendChild(nameSpan);
+
+        // Prepend newest
+        DOM.historyList.insertBefore(chip, DOM.historyList.firstChild);
+    }
+
+    DOM.historyClear.addEventListener('click', () => {
+        state.history = [];
+        state.round   = 0;
+        DOM.historyList.innerHTML = '';
+    });
+
+    // ════════════════════════════════════
+    // § 8 · SHAKE ANIMATION  (invalid input feedback)
+    // ════════════════════════════════════
+
+    function showShake(el) {
+        el.style.transition  = 'transform 0.08s ease';
+        const seq = [6, -6, 5, -5, 3, -3, 0];
+        let i = 0;
+        const step = () => {
+            if (i >= seq.length) { el.style.transform = ''; return; }
+            el.style.transform = `translateX(${seq[i++]}px)`;
+            setTimeout(step, 60);
+        };
+        step();
+        el.focus();
+    }
+
+    // ════════════════════════════════════
+    // § 9 · CONFETTI
+    // ════════════════════════════════════
+
+    const canvas = $('confetti-canvas');
+    const ctx    = canvas.getContext('2d');
+    let particles = [];
+    let rafId     = null;
+
+    function resizeCanvas() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas, { passive: true });
+    resizeCanvas();
+
+    function makeParticle() {
+        return {
+            x     : Math.random() * canvas.width,
+            y     : -10 - Math.random() * 40,          // spawn above viewport
+            color : `hsl(${Math.random() * 360},70%,55%)`,
+            w     : Math.random() * 10 + 5,
+            h     : Math.random() * 6  + 4,
+            vx    : Math.random() * 5 - 2.5,
+            vy    : Math.random() * 4 + 2,
+            gravity: 0.12,
+            rot   : Math.random() * 360,
+            rotV  : Math.random() * 8 - 4,
+        };
+    }
+
+    function celebrate() {
+        particles = Array.from({ length: 160 }, makeParticle);
+        if (rafId) cancelAnimationFrame(rafId);
+        drawConfetti();
+    }
+
+    function drawConfetti() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles = particles.filter(p => p.y < canvas.height + 30);
+
+        for (const p of particles) {
+            p.x   += p.vx;
+            p.y   += p.vy;
+            p.vy  += p.gravity;
+            p.rot += p.rotV;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
         }
 
-        // --- Confetti Logic ---
-        const canvas = document.getElementById('confetti-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function createParticle() {
-            return {
-                x: Math.random() * canvas.width,
-                y: canvas.height + Math.random() * 100,
-                color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-                size: Math.random() * 10 + 5,
-                speedX: Math.random() * 6 - 3,
-                speedY: Math.random() * -15 - 5,
-                gravity: 0.2,
-                rotation: Math.random() * 360,
-                rotationSpeed: Math.random() * 10 - 5
-            };
-        }
-
-        function celebrate() {
-            particles = [];
-            for (let i = 0; i < 150; i++) {
-                particles.push(createParticle());
-            }
-            animateConfetti();
-        }
-
-        function animateConfetti() {
-            if (particles.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
+        if (particles.length) {
+            rafId = requestAnimationFrame(drawConfetti);
+        } else {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                let p = particles[i];
-                p.x += p.speedX;
-                p.y += p.speedY;
-                p.speedY += p.gravity;
-                p.rotation += p.rotationSpeed;
-
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation * Math.PI / 180);
-                ctx.fillStyle = p.color;
-                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-                ctx.restore();
-
-                if (p.y > canvas.height) {
-                    particles.splice(i, 1);
-                    i--;
-                }
-            }
-            requestAnimationFrame(animateConfetti);
+            rafId = null;
         }
+    }
+
     </script>
 </body>
 </html>
